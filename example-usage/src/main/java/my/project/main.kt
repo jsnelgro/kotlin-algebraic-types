@@ -12,5 +12,7 @@ data class Person(val name: String, val age: Int, val heightCm: Int, val weight:
 fun main(args: Array<String>) {
     val person1 = Person(name = "Brian", age = 28, heightCm = 170, weight = 170)
     val agelessPerson = PersonOmit("I did it!!!!")
+    val simplePerson = SimplePerson("Johnny", 33)
     println("$person1\n$agelessPerson")
+    println("$simplePerson")
 }

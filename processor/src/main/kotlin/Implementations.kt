@@ -1,3 +1,5 @@
+import com.google.devtools.ksp.KspExperimental
+import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
@@ -16,6 +18,7 @@ fun OutputStream.appendText(str: String) {
     this.write(str.toByteArray())
 }
 
+@OptIn(KspExperimental::class)
 class ADTProcessor(
     val codeGenerator: CodeGenerator,
     val logger: KSPLogger,
@@ -53,14 +56,28 @@ class ADTProcessor(
 
     private fun processPick(resolver: Resolver): List<KSAnnotated> =
         processClassDeclarations("Pick", resolver) { node ->
-            val packageName = node.containingFile!!.packageName.asString()
-            val className = "${node.simpleName.asString()}Pick"
-            val file = codeGenerator.createNewFile(Dependencies(true, node.containingFile!!), packageName, className)
-            if (packageName.isNotBlank()) {
-                file.appendText("package $packageName\n\n")
+            val picks = node.getAnnotationsByType(Pick::class)
+            picks.forEach { ann ->
+                val packageName = node.containingFile!!.packageName.asString()
+                val className = ann.name //"${node.simpleName.asString()}Pick"
+                val fieldsToAdd = ann.fields.toSet()
+                val file =
+                    codeGenerator.createNewFile(Dependencies(true, node.containingFile!!), packageName, className)
+                if (packageName.isNotBlank()) {
+                    file.appendText("package $packageName\n\n")
+                }
+                file.appendText("data class $className(\n")
+                // NODE: write fields
+                node.getAllProperties().forEach {  prop ->
+                    val propName = prop.simpleName.getShortName()
+                    val propType = prop.type.toString()
+                    if (propName in fieldsToAdd) {
+                        file.appendText("    val $propName: $propType,\n")
+                    }
+                }
+                file.appendText("\n)\n")
+                file.close()
             }
-            file.appendText("data class $className(val todo: String = \"implement me!\")\n")
-            file.close()
         }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
