@@ -51,9 +51,9 @@ fun NameAndHealthViaOmit.Companion.prettyPrint(name: String, health: Int) =
 // Example from the motivating SO question:
 // https://stackoverflow.com/questions/68009117/kotlin-equivalent-of-omit-typescript-utility-type/75189565#75189565
 data class Comment(val body: String, val ts: Timestamp)
-class RoutePoint {
+class RoutePoint(val id: Int) {
     fun doIO() {
-        println("IO from RoutePoint class")
+        println("IO from RoutePoint class #$id")
     }
 }
 

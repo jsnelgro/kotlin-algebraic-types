@@ -26,17 +26,14 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
+import com.squareup.kotlinpoet.buildCodeBlock
 import com.squareup.kotlinpoet.ksp.kspDependencies
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.toTypeParameterResolver
 import com.squareup.kotlinpoet.ksp.toTypeVariableName
 import com.squareup.kotlinpoet.ksp.writeTo
-import java.io.OutputStream
-
-fun OutputStream.appendText(str: String) {
-    this.write(str.toByteArray())
-}
+import com.squareup.kotlinpoet.withIndent
 
 // shorthand for generating a constructor of properties (i.e. data class constructor)
 fun TypeSpec.Builder.primaryConstructor(vararg properties: PropertySpec): TypeSpec.Builder {
@@ -120,8 +117,14 @@ fun ADTProcessor.simpleDataClassOf(
         addFunction(FunSpec.builder("from").apply {
             addTypeVariables(allGenerics)
             addParameter("source", annotatedClassClassname)
-            addStatement("TODO(\"map fields to new class from annotated one and return it\")")
             returns(generatedClassName)
+            addCode(buildCodeBlock {
+                add("return ${ClassName.bestGuess(name)}(\n")
+                withIndent {
+                    props.forEach { add("${it.name} = source.${it.name},\n") }
+                }
+                add(")")
+            })
         }.build())
     }.build()
 

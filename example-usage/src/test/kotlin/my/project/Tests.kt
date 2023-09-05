@@ -2,12 +2,25 @@ package my.project
 
 import my.project.my.namespaced.SimpleImmutableScoredValue
 import org.junit.jupiter.api.Assertions.assertNotNull
+import java.sql.Timestamp
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class Tests {
     val examplePlayer = Player("Johnny", 33, 100, "sword", listOf("$100"))
+    val exampleRoutePoint = RouteWithId(
+        "id1",
+        "things",
+        "stuff",
+        listOf(Comment("hello", Timestamp.from(Instant.ofEpochMilli(1693892191946)))),
+        listOf(),
+        listOf(RoutePoint(1), RoutePoint(42)),
+        "userId",
+        RouteWithId.RouteState.IN_REVIEW,
+        listOf(TrackInfo("Beastie Boys - Brass Monkey")),
+    )
 
     @Test
     fun `Player class pick test`() {
@@ -57,11 +70,24 @@ class Tests {
 
     @Test
     fun `generated Pick classes contain a from method for converting from the target class`() {
-        val expected = WeaponAndInventory("sword", listOf("$100"))
-        val actual = WeaponAndInventory.from(examplePlayer)
         assertEquals(
-            expected,
-            actual,
+            WeaponAndInventory("sword", listOf("$100")),
+            WeaponAndInventory.from(examplePlayer)
+        )
+
+        assertEquals(
+            NameAndInventory("Johnny", listOf("$100")),
+            NameAndInventory.from(examplePlayer)
+        )
+
+        assertEquals(
+            NameAndHealthViaOmit("Johnny", 100),
+            NameAndHealthViaOmit.from(examplePlayer)
+        )
+
+        assertEquals(
+            NameAndHealthViaPick("Johnny", 100),
+            NameAndHealthViaPick.from(examplePlayer)
         )
     }
 }
