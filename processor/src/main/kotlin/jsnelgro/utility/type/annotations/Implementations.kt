@@ -93,10 +93,12 @@ fun ADTProcessor.simpleDataClassOf(
             it.simpleName.getShortName(),
             it.type.toTypeName(typeParams.toTypeParameterResolver())
         ).build()
-    }
+    }.toSet()
+    val propNames = params.map { it.simpleName.getShortName() }.toSet()
 
     val allGenerics = typeParams.map { it.toTypeVariableName() }
     val usedGenerics = props.flatMap { it.type.collectGenerics() }
+    val unusedGenerics = allGenerics.filter { it !in usedGenerics }
     val annotatedClassClassname = annotatedClass.toClassName().let {
         if (allGenerics.isNotEmpty()) it.parameterizedBy(allGenerics) else it
     }
@@ -104,16 +106,45 @@ fun ADTProcessor.simpleDataClassOf(
         if (usedGenerics.isNotEmpty()) it.parameterizedBy(usedGenerics) else it
     }
 
-    val generatedClass = TypeSpec.classBuilder(name).also { klass ->
-        klass.addModifiers(KModifier.DATA)
-        klass.primaryConstructor(*props.toTypedArray())
+    val generatedClass = TypeSpec.classBuilder(name).also { clazz ->
+        clazz.addModifiers(KModifier.DATA)
+        clazz.primaryConstructor(*props.toTypedArray())
         // adds generics if needed
-        klass.addTypeVariables(usedGenerics)
+        clazz.addTypeVariables(usedGenerics)
+
+        // conversion method back to the source class
+        clazz.addFunction(FunSpec.builder("to${annotatedClass.toClassName().simpleName}").apply {
+            // NOTE: add all UNused generics as function type variables.
+            // Otherwise we want to reuse the generics from the generated class
+            addTypeVariables(unusedGenerics)
+            returns(annotatedClassClassname)
+            // add all missing props as args
+            val missingProps = annotatedClass.getAllProperties().filter { it.simpleName.getShortName() !in propNames }
+            missingProps.forEach {
+                addParameter(
+                    it.simpleName.getShortName(),
+                    it.type.toTypeName(typeParams.toTypeParameterResolver())
+                )
+            }
+
+            // generate mapping fn
+            addCode(buildCodeBlock {
+                add("return ${annotatedClass.toClassName().simpleName}(\n")
+                withIndent {
+                    missingProps.forEach { add("${it.simpleName.getShortName()} = ${it.simpleName.getShortName()},\n") }
+                    props.forEach { add("${it.name} = this.${it.name},\n") }
+                }
+                add(")")
+            })
+
+        }.build())
+
+
     }.build()
 
-    // add a companion object
-    // TODO: add some helper methods to this class to make conversion easier
+    // companion object with helper method for conversion
     val companion = TypeSpec.companionObjectBuilder().apply {
+        // conversion method from the source class
         addFunction(FunSpec.builder("from").apply {
             addTypeVariables(allGenerics)
             addParameter("source", annotatedClassClassname)

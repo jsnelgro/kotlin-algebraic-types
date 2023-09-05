@@ -59,13 +59,12 @@ class Tests {
 
     @Test
     fun `generated Pick classes contain a toXYZ method to convert back to the target class`() {
-        // TODO: implement me!
-//        val actual = WeaponAndInventory("sword", listOf("$100")).toPlayer(
-//            name = "Johnny",
-//            age = 33,
-//            health = 100,
-//        )
-//        assertEquals(examplePlayer, actual)
+        val actual = WeaponAndInventory("sword", listOf("$100")).toPlayer(
+            name = "Johnny",
+            age = 33,
+            health = 100,
+        )
+        assertEquals(examplePlayer, actual)
     }
 
     @Test
