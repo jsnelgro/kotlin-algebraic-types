@@ -1,6 +1,6 @@
-//plugins {
-//    kotlin("jvm")
-//}
+plugins {
+    kotlin("jvm") apply false
+}
 
 subprojects {
     repositories {
