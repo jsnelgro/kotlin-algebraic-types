@@ -19,8 +19,11 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.ksp.kspDependencies
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.toTypeParameterResolver
@@ -70,28 +73,55 @@ class ClassVisitor(val fn: (node: KSClassDeclaration, data: Unit) -> Unit) : KSE
         fn(classDeclaration, data)
 }
 
-fun simpleDataClassOf(
+fun TypeName.collectGenerics(): Set<TypeVariableName> {
+    return when (this) {
+        is TypeVariableName -> setOf(this)
+        is ParameterizedTypeName -> this.typeArguments.flatMap { it.collectGenerics() }.toSet()
+        else -> emptySet()
+    }
+}
+
+//fun TypeName.usesGeneric(generic: List<TypeVariableName>): Boolean {
+//    if (generic.any { it == this }) {
+//        return true
+//    }
+//    if (this is ParameterizedTypeName) {
+//        return this.typeArguments.any { it.usesGeneric(generic) }
+//    }
+//    return false
+//}
+
+fun ADTProcessor.simpleDataClassOf(
     name: String,
     params: List<KSPropertyDeclaration>,
     typeParams: List<KSTypeParameter> = emptyList(),
 ): TypeSpec {
     return TypeSpec.classBuilder(name).apply {
         addModifiers(KModifier.DATA)
-        // adds generics if needed
-        addTypeVariables(typeParams.map { it.toTypeVariableName() })
+
         val props = params.map {
             PropertySpec.builder(
                 it.simpleName.getShortName(),
                 it.type.toTypeName(typeParams.toTypeParameterResolver())
             ).build()
-        }.toTypedArray()
-        primaryConstructor(*props)
+        }
+        primaryConstructor(*props.toTypedArray())
+
+        val generics = typeParams.map { it.toTypeVariableName() }
+        val usedGenerics = props.flatMap { it.type.collectGenerics() }
+        // adds generics if needed
+        addTypeVariables(usedGenerics)
+
+
+        // add a companion object
+        // TODO: add some helper methods to this class to make conversion easier
+        addType(TypeSpec.companionObjectBuilder().build())
     }.build()
 }
 
 class ADTProcessor(
     private val codeGenerator: CodeGenerator,
-    private val logger: KSPLogger,
+    val logger: KSPLogger,
 ) : SymbolProcessor {
 
     private fun processOmit(
