@@ -86,7 +86,7 @@ fun ADTProcessor.simpleDataClassOf(
     params: List<KSPropertyDeclaration>,
     typeParams: List<KSTypeParameter> = emptyList(),
     annotatedClass: KSClassDeclaration,
-): TypeSpec {
+): Pair<TypeSpec, FunSpec> {
 
     val props = params.map {
         PropertySpec.builder(
@@ -107,6 +107,13 @@ fun ADTProcessor.simpleDataClassOf(
     }
 
     val generatedClass = TypeSpec.classBuilder(name).also { clazz ->
+        clazz.addKdoc(
+            """
+                |DO NOT EDIT!
+                |Generated via annotation on [${annotatedClassClassname}].
+                |Edit that class and its annotations instead.
+                |""".trimMargin()
+        )
         clazz.addModifiers(KModifier.DATA)
         clazz.primaryConstructor(*props.toTypedArray())
         // adds generics if needed
@@ -136,10 +143,7 @@ fun ADTProcessor.simpleDataClassOf(
                 }
                 add(")")
             })
-
         }.build())
-
-
     }.build()
 
     // companion object with helper method for conversion
@@ -159,24 +163,25 @@ fun ADTProcessor.simpleDataClassOf(
         }.build())
     }.build()
 
-    return generatedClass.toBuilder(TypeSpec.Kind.CLASS).apply {
+    val finalClass = generatedClass.toBuilder(TypeSpec.Kind.CLASS).apply {
         addType(companion)
     }.build()
+
+    // TODO: figure out how to finish adding extension methods to annotated classes.
+    //  For some reason KotlinPoet keeps generating an import for the newly generated class
+    //  and it produces invalid sourcecode. Not sure how to tell KotlinPoet to not generate
+    //  an import...
+    val extMethod = FunSpec.builder("to$name")
+        .receiver(annotatedClassClassname)
+        .returns(generatedClassName)
+        .addStatement("return %N.from(this)", name)
+        .build()
+
+    return finalClass to extMethod
 }
 
-/**
- * example of what generated helper should look like:
- *
- * fun <T, E> WeaponAndInventory.Companion.from(it: Player<T, E>): WeaponAndInventory<T, E> {
- *         return WeaponAndInventory(
- *             weapon = it.weapon,
- *             inventory = it.inventory,
- *         )
- *     }
- */
-
 class ADTProcessor(
-    private val codeGenerator: CodeGenerator,
+    val codeGenerator: CodeGenerator,
     val logger: KSPLogger,
 ) : SymbolProcessor {
 
@@ -184,42 +189,49 @@ class ADTProcessor(
         resolver: Resolver
     ): List<KSAnnotated> = processClassesWithAnnotation<Omit>(resolver) { node, ann ->
         val fieldsToOmit = ann.fields.toSet()
-        val (pkg, className) = ann.name.split(".").let {
-            buildString {
-                append(node.containingFile!!.packageName.asString())
-                append(".")
-                append(it.dropLast(1).joinToString("."))
-            } to it.last()
-        }
-        val builder = FileSpec.builder(pkg, className).apply {
-            val dataClass = simpleDataClassOf(
-                className,
-                node.getAllProperties().filter { it.simpleName.getShortName() !in fieldsToOmit }.toList(),
-                node.typeParameters,
-                node,
-            )
-            addType(dataClass)
-        }.build()
+        val className = ClassName.bestGuess(
+            "${node.containingFile!!.packageName.asString()}.${ann.name}"
+        )
+        val (dataClass, extensionMethod) = simpleDataClassOf(
+            className.simpleName,
+            node.getAllProperties().filter { it.simpleName.getShortName() !in fieldsToOmit }.toList(),
+            node.typeParameters,
+            node,
+        )
 
-        builder.writeTo(codeGenerator, builder.kspDependencies(true))
+        FileSpec.builder(className).apply {
+            addType(dataClass)
+            // TODO: figure out how to get poet to NOT generate imports for
+            //  the return type of this method
+            //addFunction(extensionMethod)
+        }.build().also {
+            it.writeTo(codeGenerator, it.kspDependencies(true))
+        }
     }
 
     private fun processPick(
         resolver: Resolver
     ): List<KSAnnotated> = processClassesWithAnnotation<Pick>(resolver) { node, ann ->
         val fieldsToPick = ann.fields.toSet()
-        val builder = FileSpec.builder(node.containingFile!!.packageName.asString(), ann.name).apply {
-            addType(
-                simpleDataClassOf(
-                    ann.name,
-                    node.getAllProperties().filter { it.simpleName.getShortName() in fieldsToPick }.toList(),
-                    node.typeParameters,
-                    node,
-                )
-            )
-        }.build()
+        val className = ClassName.bestGuess(
+            "${node.containingFile!!.packageName.asString()}.${ann.name}"
+        )
 
-        builder.writeTo(codeGenerator, builder.kspDependencies(true))
+        val (dataClass, extensionMethod) = simpleDataClassOf(
+            className.simpleName,
+            node.getAllProperties().filter { it.simpleName.getShortName() in fieldsToPick }.toList(),
+            node.typeParameters,
+            node,
+        )
+
+        FileSpec.builder(className).apply {
+            addType(dataClass)
+            // TODO: figure out how to get poet to NOT generate imports for
+            //  the return type of this method
+            //addFunction(extensionMethod)
+        }.build().also {
+            it.writeTo(codeGenerator, it.kspDependencies(true))
+        }
     }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {

@@ -2,6 +2,7 @@ package my.project
 
 import my.project.my.namespaced.SimpleImmutableScoredValue
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.assertThrows
 import java.sql.Timestamp
 import java.time.Instant
 import kotlin.test.Test
@@ -45,9 +46,14 @@ class Tests {
     @Test
     fun `multiple omit annotations and namespaces`() {
         assertIs<Coordinate3D>(Coordinate3D(1, 2, 3))
-        assertIs<my.project.some.namespaced.Coordinate2D>(my.project.some.namespaced.Coordinate2D(2, 3))
         assertIs<OnlyX>(OnlyX(x = 1))
         assertIs<OnlyY>(OnlyY(y = 1))
+    }
+
+    @Test
+    fun `can namespace in packages`() {
+        assertNotNull(my.project.some.namespaced.Coordinate2D(2, 3))
+        assertThrows<ClassCastException> { my.project.some.namespaced.OnlyX(x = 10) as OnlyX }
     }
 
     @Test
@@ -75,7 +81,29 @@ class Tests {
     }
 
     @Test
+    fun `function args are copied and retained`() {
+        val polly = Bird("Polly", "Conure") { "Squak! I'm $name the $species!" }
+        val unknownPolly = UnknownBirdSpecies.from(polly)
+        val polly2 = unknownPolly.toBird("Conure")
+        assertEquals(
+            polly.speak(polly),
+            polly2.speak(polly2),
+        )
+    }
+
+    @Test
     fun `conversion is not lossy`() {
+        // TODO: this test fails but the type signatures are the same
+//        assertEquals(
+//            ScoredValue("test", 1.5, "hello") { x, _ -> x },
+//            ImmutableScoredValue("test", 1.5, "hello").toScoredValue { x, _ -> x }
+//        )
+
+        assertEquals(
+            Coordinate2D(2, 3).toSingleAnnotationExample(4).norm(),
+            SingleAnnotationExample(2, 3, 4).norm(),
+        )
+
         assertEquals(
             examplePlayer,
             WeaponAndInventory

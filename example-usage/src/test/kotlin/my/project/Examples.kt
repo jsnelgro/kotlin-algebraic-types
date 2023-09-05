@@ -8,10 +8,19 @@ import javax.print.attribute.standard.Media
 
 // simple single annotation
 @Omit("Coordinate2D", fields = ["z"])
-data class SingleAnnotationExample(val x: Int, val y: Int, val z: Int)
+data class SingleAnnotationExample(val x: Int, val y: Int, val z: Int) {
+    fun norm(): Triple<Float, Float, Float> {
+        val sum = (x + y + z).toFloat()
+        return Triple(x / sum, y / sum, z / sum)
+    }
+}
+
+@Omit("UnknownBirdSpecies", ["species"])
+data class Bird(val name: String, val species: String, val speak: Bird.() -> Unit)
 
 // multiple annotations including namespaced
 @Omit("some.namespaced.Coordinate2D", fields = ["z"])
+@Pick("some.namespaced.OnlyX", fields = ["x"])
 @Omit("OnlyX", ["y", "z"])
 @Omit("OnlyY", ["x", "z"])
 data class Coordinate3D(val x: Int, val y: Int, val z: Int)
@@ -22,9 +31,10 @@ data class Coordinate3D(val x: Int, val y: Int, val z: Int)
 @Omit("my.namespaced.SimpleImmutableScoredValue", ["calcScore", "name"])
 data class ScoredValue<T, R : Number>(
     val value: T,
-    // TODO: mutable fields are currently converted to immutable fields
+    // MAYBE TODO: mutable fields are currently converted to immutable fields...
+    //  but I might leave this as is since it keeps things simpler and the dev
+    //  can always convert back to the source class to do some mutation
     var score: R, val name: String,
-    // TODO: function types are currently ignored
     val calcScore: (R, Instant) -> R
 )
 
