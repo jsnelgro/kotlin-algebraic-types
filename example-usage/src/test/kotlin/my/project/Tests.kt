@@ -58,13 +58,51 @@ class Tests {
     }
 
     @Test
-    fun `generated Pick classes contain a toXYZ method to convert back to the target class`() {
+    fun `generated Pick classes contain an toXYZ method to convert back to the target class`() {
         val actual = WeaponAndInventory("sword", listOf("$100")).toPlayer(
             name = "Johnny",
             age = 33,
             health = 100,
         )
         assertEquals(examplePlayer, actual)
+    }
+
+    @Test
+    fun `generated Omit classes contain an toXYZ method to convert back to the target class`() {
+        val actual = NamelessTransmogrifier(42, "Calvin")
+            .toTransmogrifier("Hobbes")
+        assertEquals(Transmogrifier("Hobbes", 42, "Calvin"), actual)
+    }
+
+    @Test
+    fun `conversion is not lossy`() {
+        assertEquals(
+            examplePlayer,
+            WeaponAndInventory
+                .from(examplePlayer)
+                .toPlayer(examplePlayer.name, examplePlayer.age, examplePlayer.health)
+        )
+
+        assertEquals(
+            examplePlayer,
+            NameAndInventory
+                .from(examplePlayer)
+                .toPlayer(examplePlayer.age, examplePlayer.health, examplePlayer.weapon)
+        )
+
+        assertEquals(
+            examplePlayer,
+            NameAndHealthViaOmit
+                .from(examplePlayer)
+                .toPlayer(examplePlayer.age, examplePlayer.weapon, examplePlayer.inventory)
+        )
+
+        assertEquals(
+            examplePlayer,
+            NameAndHealthViaPick
+                .from(examplePlayer)
+                .toPlayer(examplePlayer.age, examplePlayer.weapon, examplePlayer.inventory)
+        )
     }
 
     @Test
