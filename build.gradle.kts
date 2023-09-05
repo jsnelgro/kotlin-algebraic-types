@@ -1,12 +1,22 @@
-plugins {
-    kotlin("jvm")
-}
+//plugins {
+//    kotlin("jvm")
+//}
 
 subprojects {
     repositories {
         mavenCentral()
     }
 }
+
+//dependencies {
+//    implementation(kotlin("stdlib"))
+//
+//    testImplementation(kotlin("test"))
+//}
+//
+//tasks.test {
+//    useJUnitPlatform()
+//}
 
 // // attempt 1
 //plugins {
@@ -33,18 +43,6 @@ subprojects {
 //    mavenCentral()
 //}
 
-//dependencies {
-//    testImplementation(kotlin("test"))
-//}
-
-//tasks.test {
-//    useJUnitPlatform()
-//}
-
 //kotlin {
 //    jvmToolchain(8)
-//}
-
-//application {
-//    mainClass.set("MainKt")
 //}

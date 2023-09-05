@@ -1,7 +1,7 @@
 package my.project
 
-import Omit
-import Pick
+import jsnelgro.utility.type.annotations.Omit
+import jsnelgro.utility.type.annotations.Pick
 
 // generate SimplePerson class with only name and age fields
 @Pick("SimplePerson", fields = ["name", "age"])
@@ -19,6 +19,7 @@ fun main() {
         UnsavedPerson(name = "Brian", age = 28, heightCm = 170, weight = 175),
         AgelessPerson(1, "Johnny", 170, 175),
         SimplePerson("Johnny", 33),
+        Transmogrifier("hi", "hello", "world"),
         NamelessTransmogrifier(SimplePerson("Calvin", 8), "Calvin"),
     ).forEach { println("$it") }
 }

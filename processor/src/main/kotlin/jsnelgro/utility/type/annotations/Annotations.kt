@@ -1,3 +1,5 @@
+package jsnelgro.utility.type.annotations
+
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
 @Repeatable

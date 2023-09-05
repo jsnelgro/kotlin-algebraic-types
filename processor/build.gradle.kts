@@ -13,6 +13,14 @@ dependencies {
     implementation("com.squareup:kotlinpoet:1.14.2")
     implementation("com.squareup:kotlinpoet-ksp:1.14.2")
     implementation("com.google.devtools.ksp:symbol-processing-api:$kspVersion")
+
+    testImplementation(kotlin("test"))
+    testImplementation(platform("org.junit:junit-bom:5.9.1"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 sourceSets.main {

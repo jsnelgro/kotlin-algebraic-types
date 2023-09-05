@@ -1,3 +1,5 @@
+package jsnelgro.utility.type.annotations
+
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.processing.CodeGenerator
