@@ -50,8 +50,7 @@ inline fun <reified T : Annotation> processClassesWithAnnotation(
     resolver: Resolver,
     crossinline visitorFn: (node: KSClassDeclaration, annotationData: T) -> Unit
 ): List<KSAnnotated> {
-    val annotationPath = T::class.qualifiedName!!
-    val symbols = resolver.getSymbolsWithAnnotation(annotationPath)
+    val symbols = resolver.getSymbolsWithAnnotation(T::class.qualifiedName!!)
     val ret = symbols.filter { !it.validate() }.toList()
     symbols
         .filter { it is KSClassDeclaration && it.validate() }
@@ -99,10 +98,17 @@ class ADTProcessor(
         resolver: Resolver
     ): List<KSAnnotated> = processClassesWithAnnotation<Omit>(resolver) { node, ann ->
         val fieldsToOmit = ann.fields.toSet()
-        val builder = FileSpec.builder(node.containingFile!!.packageName.asString(), ann.name).apply {
+        val (pkg, className) = ann.name.split(".").let {
+            buildString {
+                append(node.containingFile!!.packageName.asString())
+                append(".")
+                append(it.dropLast(1).joinToString("."))
+            } to it.last()
+        }
+        val builder = FileSpec.builder(pkg, className).apply {
             addType(
                 simpleDataClassOf(
-                    ann.name,
+                    className,
                     node.getAllProperties().filter { it.simpleName.getShortName() !in fieldsToOmit }.toList(),
                     node.typeParameters,
                 )
