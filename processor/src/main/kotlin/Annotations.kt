@@ -1,5 +1,6 @@
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
+@Repeatable
 annotation class Omit(
     val name: String,
     val fields: Array<String>,
@@ -7,6 +8,7 @@ annotation class Omit(
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
+@Repeatable
 annotation class Pick(
     val name: String,
     val fields: Array<String>,

@@ -9,8 +9,9 @@ version = "1.0-SNAPSHOT"
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.squareup:javapoet:1.12.1")
+//    implementation("com.squareup:javapoet:1.12.1")
     implementation("com.squareup:kotlinpoet:1.14.2")
+    implementation("com.squareup:kotlinpoet-ksp:1.14.2")
     implementation("com.google.devtools.ksp:symbol-processing-api:$kspVersion")
 }
 
