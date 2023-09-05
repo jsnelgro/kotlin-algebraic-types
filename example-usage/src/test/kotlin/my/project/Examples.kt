@@ -2,7 +2,9 @@ package my.project
 
 import jsnelgro.utility.type.annotations.Omit
 import jsnelgro.utility.type.annotations.Pick
+import java.sql.Timestamp
 import java.time.Instant
+import javax.print.attribute.standard.Media
 
 // simple single annotation
 @Omit("Coordinate2D", fields = ["z"])
@@ -21,8 +23,7 @@ data class Coordinate3D(val x: Int, val y: Int, val z: Int)
 data class ScoredValue<T, R : Number>(
     val value: T,
     // TODO: mutable fields are currently converted to immutable fields
-    var score: R,
-    val name: String,
+    var score: R, val name: String,
     // TODO: function types are currently ignored
     val calcScore: (R, Instant) -> R
 )
@@ -33,12 +34,45 @@ data class ScoredValue<T, R : Number>(
 @Pick("WeaponAndInventory", ["weapon", "inventory"])
 @Omit("NameAndHealthViaOmit", fields = ["age", "inventory", "weapon"])
 data class Player<T, E>(val name: String, val age: Int, val health: Int, val weapon: T, val inventory: List<E>) {
-    // TODO: methods and dynamic getters that are able to be copied over currently are not
+    // TODO: copy over methods and dynamic getters that are able to be copied
     fun formattedNameAndHealth() = "$name: $health"
 }
 
 fun NameAndHealthViaPick.prettyPrint() = "$name: $health"
 fun NameAndHealthViaOmit.prettyPrint() = "$name: $health"
 
-fun NameAndHealthViaPick.Companion.prettyPrint(it: NameAndHealthViaPick) = it.prettyPrint()
-fun NameAndHealthViaOmit.Companion.prettyPrint(it: NameAndHealthViaOmit) = it.prettyPrint()
+fun NameAndHealthViaPick.Companion.prettyPrint(name: String, health: Int) =
+    NameAndHealthViaPick(name, health).prettyPrint()
+
+fun NameAndHealthViaOmit.Companion.prettyPrint(name: String, health: Int) =
+    NameAndHealthViaOmit(name, health).prettyPrint()
+
+
+// Example from the motivating SO question:
+// https://stackoverflow.com/questions/68009117/kotlin-equivalent-of-omit-typescript-utility-type/75189565#75189565
+data class Comment(val body: String, val ts: Timestamp)
+class RoutePoint {
+    fun doIO() {
+        println("IO from RoutePoint class")
+    }
+}
+
+class TrackInfo(val title: String)
+
+@Omit("Route", ["id"])
+data class RouteWithId(
+    val id: String,
+    val name: String,
+    val description: String,
+    val comments: List<Comment>,
+    val media: List<Media>,
+    val points: List<RoutePoint>,
+    val userId: String,
+    val status: RouteState,
+    val tracks: List<TrackInfo>,
+) {
+    enum class RouteState(val value: String) {
+        IN_REVIEW("in-review"),
+        PUBLISHED("published");
+    }
+}

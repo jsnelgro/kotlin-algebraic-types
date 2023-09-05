@@ -15,16 +15,19 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.google.devtools.ksp.validate
 import com.google.devtools.ksp.visitor.KSEmptyVisitor
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.ksp.kspDependencies
+import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.toTypeParameterResolver
 import com.squareup.kotlinpoet.ksp.toTypeVariableName
@@ -81,43 +84,62 @@ fun TypeName.collectGenerics(): Set<TypeVariableName> {
     }
 }
 
-//fun TypeName.usesGeneric(generic: List<TypeVariableName>): Boolean {
-//    if (generic.any { it == this }) {
-//        return true
-//    }
-//    if (this is ParameterizedTypeName) {
-//        return this.typeArguments.any { it.usesGeneric(generic) }
-//    }
-//    return false
-//}
-
 fun ADTProcessor.simpleDataClassOf(
     name: String,
     params: List<KSPropertyDeclaration>,
     typeParams: List<KSTypeParameter> = emptyList(),
+    annotatedClass: KSClassDeclaration,
 ): TypeSpec {
-    return TypeSpec.classBuilder(name).apply {
-        addModifiers(KModifier.DATA)
 
-        val props = params.map {
-            PropertySpec.builder(
-                it.simpleName.getShortName(),
-                it.type.toTypeName(typeParams.toTypeParameterResolver())
-            ).build()
-        }
-        primaryConstructor(*props.toTypedArray())
+    val props = params.map {
+        PropertySpec.builder(
+            it.simpleName.getShortName(),
+            it.type.toTypeName(typeParams.toTypeParameterResolver())
+        ).build()
+    }
 
-        val generics = typeParams.map { it.toTypeVariableName() }
-        val usedGenerics = props.flatMap { it.type.collectGenerics() }
+    val allGenerics = typeParams.map { it.toTypeVariableName() }
+    val usedGenerics = props.flatMap { it.type.collectGenerics() }
+    val annotatedClassClassname = annotatedClass.toClassName().let {
+        if (allGenerics.isNotEmpty()) it.parameterizedBy(allGenerics) else it
+    }
+    val generatedClassName = ClassName.bestGuess(name).let {
+        if (usedGenerics.isNotEmpty()) it.parameterizedBy(usedGenerics) else it
+    }
+
+    val generatedClass = TypeSpec.classBuilder(name).also { klass ->
+        klass.addModifiers(KModifier.DATA)
+        klass.primaryConstructor(*props.toTypedArray())
         // adds generics if needed
-        addTypeVariables(usedGenerics)
+        klass.addTypeVariables(usedGenerics)
+    }.build()
 
+    // add a companion object
+    // TODO: add some helper methods to this class to make conversion easier
+    val companion = TypeSpec.companionObjectBuilder().apply {
+        addFunction(FunSpec.builder("from").apply {
+            addTypeVariables(allGenerics)
+            addParameter("source", annotatedClassClassname)
+            addStatement("TODO(\"map fields to new class from annotated one and return it\")")
+            returns(generatedClassName)
+        }.build())
+    }.build()
 
-        // add a companion object
-        // TODO: add some helper methods to this class to make conversion easier
-        addType(TypeSpec.companionObjectBuilder().build())
+    return generatedClass.toBuilder(TypeSpec.Kind.CLASS).apply {
+        addType(companion)
     }.build()
 }
+
+/**
+ * example of what generated helper should look like:
+ *
+ * fun <T, E> WeaponAndInventory.Companion.from(it: Player<T, E>): WeaponAndInventory<T, E> {
+ *         return WeaponAndInventory(
+ *             weapon = it.weapon,
+ *             inventory = it.inventory,
+ *         )
+ *     }
+ */
 
 class ADTProcessor(
     private val codeGenerator: CodeGenerator,
@@ -136,13 +158,13 @@ class ADTProcessor(
             } to it.last()
         }
         val builder = FileSpec.builder(pkg, className).apply {
-            addType(
-                simpleDataClassOf(
-                    className,
-                    node.getAllProperties().filter { it.simpleName.getShortName() !in fieldsToOmit }.toList(),
-                    node.typeParameters,
-                )
+            val dataClass = simpleDataClassOf(
+                className,
+                node.getAllProperties().filter { it.simpleName.getShortName() !in fieldsToOmit }.toList(),
+                node.typeParameters,
+                node,
             )
+            addType(dataClass)
         }.build()
 
         builder.writeTo(codeGenerator, builder.kspDependencies(true))
@@ -158,6 +180,7 @@ class ADTProcessor(
                     ann.name,
                     node.getAllProperties().filter { it.simpleName.getShortName() in fieldsToPick }.toList(),
                     node.typeParameters,
+                    node,
                 )
             )
         }.build()
