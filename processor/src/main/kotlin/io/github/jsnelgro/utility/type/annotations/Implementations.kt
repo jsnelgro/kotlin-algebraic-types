@@ -1,4 +1,4 @@
-package jsnelgro.utility.type.annotations
+package io.github.jsnelgro.utility.type.annotations
 
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType

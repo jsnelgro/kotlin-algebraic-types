@@ -1,4 +1,4 @@
-package jsnelgro.utility.type.annotations
+package io.github.jsnelgro.utility.type.annotations
 
 /**
  * Generate a new data class with the given [name], omitting any properties listed in [fields]

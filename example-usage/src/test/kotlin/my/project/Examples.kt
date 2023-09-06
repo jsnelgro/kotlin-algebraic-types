@@ -1,7 +1,7 @@
 package my.project
 
-import jsnelgro.utility.type.annotations.Omit
-import jsnelgro.utility.type.annotations.Pick
+import io.github.jsnelgro.utility.type.annotations.Omit
+import io.github.jsnelgro.utility.type.annotations.Pick
 import java.sql.Timestamp
 import java.time.Instant
 import javax.print.attribute.standard.Media

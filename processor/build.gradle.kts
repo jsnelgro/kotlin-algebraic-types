@@ -2,9 +2,14 @@ val kspVersion: String by project
 
 plugins {
     kotlin("jvm")
+    `java-library`
+    `maven-publish`
 }
 
-group = "com.jsnelgro"
+// see here for more info on naming:
+// https://central.sonatype.org/publish/requirements/coordinates/
+// seems easiest to use Github as the coordinate
+group = "io.github.jsnelgro"
 version = "1.0-SNAPSHOT"
 
 dependencies {
@@ -25,6 +30,26 @@ tasks.test {
 
 sourceSets.main {
     java.srcDirs("src/main/kotlin")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("kotlinUtilityTypes") {
+            artifactId = "utility-type-annotations"
+            from(components["java"])
+        }
+    }
+
+    repositories {
+        // TODO: uncomment me to start investigating publishing to maven central
+        //  tutorial on publishing to maven central: https://central.sonatype.org/publish/
+//        mavenCentral()
+
+        maven {
+            name = "myRepo"
+            url = uri(layout.buildDirectory.dir("repo"))
+        }
+    }
 }
 
 

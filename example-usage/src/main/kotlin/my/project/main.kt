@@ -1,7 +1,7 @@
 package my.project
 
-import jsnelgro.utility.type.annotations.Omit
-import jsnelgro.utility.type.annotations.Pick
+import io.github.jsnelgro.utility.type.annotations.Omit
+import io.github.jsnelgro.utility.type.annotations.Pick
 
 // generate SimplePerson class with only name and age fields
 @Pick("SimplePerson", fields = ["name", "age"])
